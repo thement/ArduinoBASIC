@@ -273,12 +273,30 @@ bool host_ESCPressed() {
 
 char *host_readLine() {
     int pos = 0;
+    byte esc = 0;
 
     while (pos < sizeof(keyBuffer) - 1) {
 	while (!Serial.available());
 	char c = Serial.read();
-        host_click();
-	if (c == '\r' || c == '\n') {
+	host_click();
+	if (esc) {
+	    if (esc == 1 && c == 0x5b) {
+		esc = 2;
+	    } else if (esc == 2 && c == 0x41) {
+		if (pos == 0) {
+		    while (keyBuffer[pos]) {
+			host_outputChar(keyBuffer[pos++]);
+			host_click();
+		    }
+		}
+		esc = 0;
+	    } else 
+		esc = 0;
+	    continue;
+	} else if (c == '\x1b') {
+	    esc = 1;
+	    continue;
+	} else if (c == '\r' || c == '\n') {
 	    break;
 	} else if (c == '\b' || c == 127) {
 	    if (pos > 0) {
