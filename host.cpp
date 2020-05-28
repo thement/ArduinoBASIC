@@ -15,7 +15,11 @@ extern PS2Keyboard keyboard;
 extern EEPROMClass EEPROM;
 int timer1_counter;
 
+#ifdef ORIG
 char screenBuffer[SCREEN_WIDTH*SCREEN_HEIGHT];
+#else
+char keyBuffer[70];
+#endif
 char lineDirty[SCREEN_HEIGHT];
 int curX = 0, curY = 0;
 volatile char flash = 0, redraw = 0;
@@ -264,7 +268,7 @@ bool host_ESCPressed() {
 char *host_readLine() {
     int pos = 0;
 
-    while (pos < sizeof(screenBuffer) - 1) {
+    while (pos < sizeof(keyBuffer) - 1) {
 	while (!Serial.available());
 	char c = Serial.read();
         host_click();
@@ -273,17 +277,18 @@ char *host_readLine() {
 	} else if (c == '\b' || c == 127) {
 	    if (pos > 0) {
 		pos--;
+		host_outputChar('\b');
 	    }
-	    c = '\b';
+	    continue;
 	} else if (c >= ' ') {
-	    screenBuffer[pos++] = c;
+	    keyBuffer[pos++] = c;
 	}
 	host_outputChar(c);
     }
-    screenBuffer[pos] = 0;
+    keyBuffer[pos] = 0;
     host_newLine();
 
-    return screenBuffer;
+    return keyBuffer;
 }
 
 #endif
