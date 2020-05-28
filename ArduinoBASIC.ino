@@ -1,7 +1,9 @@
+#ifdef ORIG
 #include <font.h>
 #include <SSD1306ASCII.h>
 // ^ - modified for faster SPI
 #include <PS2Keyboard.h>
+#endif
 #include <EEPROM.h>
 
 #include "basic.h"
@@ -21,6 +23,7 @@
 TwiMaster rtc(true);
 #endif
 
+#ifdef ORIG
 // Keyboard
 const int DataPin = 8;
 const int IRQpin =  3;
@@ -33,6 +36,7 @@ PS2Keyboard keyboard;
 #define OLED_CS 12
 #define OLED_RST 13
 SSD1306ASCII oled(OLED_DATA, OLED_CLK, OLED_DC, OLED_RST, OLED_CS);
+#endif
 
 // NB Keyboard needs a seperate ground from the OLED
 
@@ -48,8 +52,12 @@ const char welcomeStr[] PROGMEM = "Arduino BASIC";
 char autorun = 0;
 
 void setup() {
+#ifdef ORIG
     keyboard.begin(DataPin, IRQpin);
     oled.ssd1306_init(SSD1306_SWITCHCAPVCC);
+#else
+    Serial.begin(115200);
+#endif
 
     reset();
     host_init(BUZZER_PIN);
@@ -57,7 +65,9 @@ void setup() {
     host_outputProgMemString(welcomeStr);
     // show memory size
     host_outputFreeMem(sysVARSTART - sysPROGEND);
+#ifdef ORIG
     host_showBuffer();
+#endif
     
     // IF USING EXTERNAL EEPROM
     // The following line 'wipes' the external EEPROM and prepares
@@ -80,7 +90,9 @@ void loop() {
         // special editor commands
         if (input[0] == '?' && input[1] == 0) {
             host_outputFreeMem(sysVARSTART - sysPROGEND);
+#ifdef ORIG
             host_showBuffer();
+#endif
             return;
         }
         // otherwise tokenize

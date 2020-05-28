@@ -1458,7 +1458,9 @@ int parse_LIST() {
     }
     if (executeMode) {
         listProg(first,last);
+#ifdef ORIG
         host_showBuffer();
+#endif
     }
     return 0;
 }
@@ -1485,7 +1487,9 @@ int parse_PRINT() {
     if (executeMode) {
         if (newLine)
             host_newLine();
+#ifdef ORIG
         host_showBuffer();
+#endif
     }
     return 0;
 }
@@ -1548,7 +1552,9 @@ int parseAssignment(bool inputStmt) {
                 if (!stackPushNum(f)) return ERROR_OUT_OF_MEMORY;
             }
             host_newLine();
+#ifdef ORIG
             host_showBuffer();
+#endif
         }
         val = isStringIdentifier ? TYPE_STRING : TYPE_NUMBER;
     }
@@ -1765,7 +1771,9 @@ int parseSimpleCmd() {
             }
             case TOKEN_CLS:
                 host_cls();
+#ifdef ORIG
                 host_showBuffer();
+#endif
                 break;
             case TOKEN_DIR:
 #if EXTERNAL_EEPROM

@@ -1,12 +1,17 @@
+#include <Arduino.h>
 #include "host.h"
 #include "basic.h"
 
+#ifdef ORIG
 #include <SSD1306ASCII.h>
 #include <PS2Keyboard.h>
+#endif
 #include <EEPROM.h>
 
+#ifdef ORIG
 extern SSD1306ASCII oled;
 extern PS2Keyboard keyboard;
+#endif
 extern EEPROMClass EEPROM;
 int timer1_counter;
 
@@ -18,7 +23,7 @@ char inputMode = 0;
 char inkeyChar = 0;
 char buzPin = 0;
 
-const char bytesFreeStr[] PROGMEM = "bytes free";
+const char PROGMEM bytesFreeStr[] = "bytes free";
 
 void initTimer() {
     noInterrupts();           // disable all interrupts
@@ -41,7 +46,9 @@ ISR(TIMER1_OVF_vect)        // interrupt service routine
 
 void host_init(int buzzerPin) {
     buzPin = buzzerPin;
+#ifdef ORIG
     oled.clear();
+#endif
     if (buzPin)
         pinMode(buzPin, OUTPUT);
     initTimer();
@@ -87,6 +94,7 @@ void host_startupTone() {
     }    
 }
 
+#ifdef ORIG
 void host_cls() {
     memset(screenBuffer, 32, SCREEN_WIDTH*SCREEN_HEIGHT);
     memset(lineDirty, 1, SCREEN_HEIGHT);
@@ -139,14 +147,6 @@ void host_outputString(char *str) {
     curY = pos / SCREEN_WIDTH;
 }
 
-void host_outputProgMemString(const char *p) {
-    while (1) {
-        unsigned char c = pgm_read_byte(p++);
-        if (c == 0) break;
-        host_outputChar(c);
-    }
-}
-
 void host_outputChar(char c) {
     int pos = curY*SCREEN_WIDTH+curX;
     lineDirty[pos / SCREEN_WIDTH] = 1;
@@ -157,58 +157,6 @@ void host_outputChar(char c) {
     }
     curX = pos % SCREEN_WIDTH;
     curY = pos / SCREEN_WIDTH;
-}
-
-int host_outputInt(long num) {
-    // returns len
-    long i = num, xx = 1;
-    int c = 0;
-    do {
-        c++;
-        xx *= 10;
-        i /= 10;
-    } 
-    while (i);
-
-    for (int i=0; i<c; i++) {
-        xx /= 10;
-        char digit = ((num/xx) % 10) + '0';
-        host_outputChar(digit);
-    }
-    return c;
-}
-
-char *host_floatToStr(float f, char *buf) {
-    // floats have approx 7 sig figs
-    float a = fabs(f);
-    if (f == 0.0f) {
-        buf[0] = '0'; 
-        buf[1] = 0;
-    }
-    else if (a<0.0001 || a>1000000) {
-        // this will output -1.123456E99 = 13 characters max including trailing nul
-        dtostre(f, buf, 6, 0);
-    }
-    else {
-        int decPos = 7 - (int)(floor(log10(a))+1.0f);
-        dtostrf(f, 1, decPos, buf);
-        if (decPos) {
-            // remove trailing 0s
-            char *p = buf;
-            while (*p) p++;
-            p--;
-            while (*p == '0') {
-                *p-- = 0;
-            }
-            if (*p == '.') *p = 0;
-        }   
-    }
-    return buf;
-}
-
-void host_outputFloat(float f) {
-    char buf[16];
-    host_outputString(host_floatToStr(f, buf));
 }
 
 void host_newLine() {
@@ -271,14 +219,6 @@ char *host_readLine() {
     return &screenBuffer[startPos];
 }
 
-char host_getKey() {
-    char c = inkeyChar;
-    inkeyChar = 0;
-    if (c >= 32 && c <= 126)
-        return c;
-    else return 0;
-}
-
 bool host_ESCPressed() {
     while (keyboard.available()) {
         // read the next key
@@ -288,6 +228,135 @@ bool host_ESCPressed() {
     }
     return false;
 }
+
+#else
+
+void host_cls() {}
+
+void host_moveCursor(int x, int y) {}
+
+void host_outputChar(char c) {
+    if (c == '\b') {
+	Serial.write('\b');
+	Serial.write(' ');
+    }
+    Serial.write(c);
+}
+
+void host_outputString(char *str) {
+    Serial.write(str);
+}
+
+void host_newLine() {
+    Serial.println("");
+}
+
+bool host_ESCPressed() {
+    while (Serial.available()) {
+        // read the next key
+        inkeyChar = Serial.read();
+        if (inkeyChar == 27)
+            return true;
+    }
+    return false;
+}
+
+char *host_readLine() {
+    int pos = 0;
+
+    host_newLine();
+    while (pos < sizeof(screenBuffer) - 1) {
+	while (!Serial.available());
+	char c = Serial.read();
+        host_click();
+	if (c == '\r' || c == '\n') {
+	    break;
+	} else if (c == '\b' || c == 127) {
+	    if (pos > 0) {
+		pos--;
+	    }
+	    c = '\b';
+	} else if (c >= ' ') {
+	    screenBuffer[pos++] = c;
+	}
+	host_outputChar(c);
+    }
+    screenBuffer[pos] = 0;
+
+    return screenBuffer;
+}
+
+#endif
+
+char host_getKey() {
+    char c = inkeyChar;
+    inkeyChar = 0;
+    if (c >= 32 && c <= 126)
+        return c;
+    else return 0;
+}
+
+
+void host_outputProgMemString(const char *p) {
+    while (1) {
+        unsigned char c = pgm_read_byte(p++);
+        if (c == 0) break;
+        host_outputChar(c);
+    }
+}
+
+int host_outputInt(long num) {
+    // returns len
+    long i = num, xx = 1;
+    int c = 0;
+    do {
+        c++;
+        xx *= 10;
+        i /= 10;
+    } 
+    while (i);
+
+    for (int i=0; i<c; i++) {
+        xx /= 10;
+        char digit = ((num/xx) % 10) + '0';
+        host_outputChar(digit);
+    }
+    return c;
+}
+
+char *host_floatToStr(float f, char *buf) {
+    // floats have approx 7 sig figs
+    float a = fabs(f);
+    if (f == 0.0f) {
+        buf[0] = '0'; 
+        buf[1] = 0;
+    }
+    else if (a<0.0001 || a>1000000) {
+        // this will output -1.123456E99 = 13 characters max including trailing nul
+        dtostre(f, buf, 6, 0);
+    }
+    else {
+        int decPos = 7 - (int)(floor(log10(a))+1.0f);
+        dtostrf(f, 1, decPos, buf);
+        if (decPos) {
+            // remove trailing 0s
+            char *p = buf;
+            while (*p) p++;
+            p--;
+            while (*p == '0') {
+                *p-- = 0;
+            }
+            if (*p == '.') *p = 0;
+        }   
+    }
+    return buf;
+}
+
+void host_outputFloat(float f) {
+    char buf[16];
+    host_outputString(host_floatToStr(f, buf));
+}
+
 
 void host_outputFreeMem(unsigned int val)
 {

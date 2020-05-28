@@ -141,4 +141,3 @@ int tokenize(unsigned char *input, unsigned char *output, int outputSize);
 int processInput(unsigned char *tokenBuf);
 
 #endif
-
