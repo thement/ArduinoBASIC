@@ -63,6 +63,7 @@ void setup() {
     host_init(BUZZER_PIN);
     host_cls();
     host_outputProgMemString(welcomeStr);
+    host_newLine();
     // show memory size
     host_outputFreeMem(sysVARSTART - sysPROGEND);
 #ifdef ORIG
@@ -106,16 +107,15 @@ void loop() {
     }
     // execute the token buffer
     if (ret == ERROR_NONE) {
-        host_newLine();
         ret = processInput(tokenBuf);
     }
     if (ret != ERROR_NONE) {
-        host_newLine();
         if (lineNumber !=0) {
             host_outputInt(lineNumber);
             host_outputChar('-');
         }
         host_outputProgMemString((char *)pgm_read_word(&(errorTable[ret])));
+        host_newLine();
     }
 }
 

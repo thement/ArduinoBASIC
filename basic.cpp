@@ -1543,6 +1543,8 @@ int parseAssignment(bool inputStmt) {
     if (inputStmt) {
         // from INPUT statement
         if (executeMode) {
+	    host_outputString(ident);
+	    host_outputChar('?');
             char *inputStr = host_readLine();
             if (isStringIdentifier) {
                 if (!stackPushStr(inputStr)) return ERROR_OUT_OF_MEMORY;
@@ -1551,7 +1553,6 @@ int parseAssignment(bool inputStmt) {
                 float f = (float)strtod(inputStr, 0);
                 if (!stackPushNum(f)) return ERROR_OUT_OF_MEMORY;
             }
-            host_newLine();
 #ifdef ORIG
             host_showBuffer();
 #endif

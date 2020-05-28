@@ -264,7 +264,6 @@ bool host_ESCPressed() {
 char *host_readLine() {
     int pos = 0;
 
-    host_newLine();
     while (pos < sizeof(screenBuffer) - 1) {
 	while (!Serial.available());
 	char c = Serial.read();
@@ -282,6 +281,7 @@ char *host_readLine() {
 	host_outputChar(c);
     }
     screenBuffer[pos] = 0;
+    host_newLine();
 
     return screenBuffer;
 }
@@ -360,10 +360,10 @@ void host_outputFloat(float f) {
 
 void host_outputFreeMem(unsigned int val)
 {
-    host_newLine();
     host_outputInt(val);
     host_outputChar(' ');
     host_outputProgMemString(bytesFreeStr);      
+    host_newLine();
 }
 
 void host_saveProgram(bool autoexec) {
