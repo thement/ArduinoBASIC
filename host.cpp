@@ -7,6 +7,9 @@
 #include <PS2Keyboard.h>
 #endif
 #include <EEPROM.h>
+#ifdef EXTERNAL_EEPROM
+#include <Wire.h>
+#endif
 
 #ifdef ORIG
 extern SSD1306ASCII oled;
@@ -52,6 +55,9 @@ void host_init(int buzzerPin) {
     buzPin = buzzerPin;
 #ifdef ORIG
     oled.clear();
+#endif
+#if EXTERNAL_EEPROM
+    Wire.begin();
 #endif
     if (buzPin)
         pinMode(buzPin, OUTPUT);
@@ -387,29 +393,33 @@ void host_loadProgram() {
 }
 
 #if EXTERNAL_EEPROM
-#include <I2cMaster.h>
-extern TwiMaster rtc;
 
 void writeExtEEPROM(unsigned int address, byte data) 
 {
   if (address % 32 == 0) host_click();
-  rtc.start((EXTERNAL_EEPROM_ADDR<<1)|I2C_WRITE);
-  rtc.write((int)(address >> 8));   // MSB
-  rtc.write((int)(address & 0xFF)); // LSB
-  rtc.write(data);
-  rtc.stop();
+  Wire.beginTransmission(EXTERNAL_EEPROM_ADDR);
+  Wire.write((unsigned char)(address >> 8));   // MSB
+  Wire.write((unsigned char)(address & 0xFF)); // LSB
+  Wire.write(data);
+  int ret = Wire.endTransmission();
+  if (ret != 0) {
+    Serial.println('!');
+  }
   delay(5);
 }
  
 byte readExtEEPROM(unsigned int address) 
 {
-  rtc.start((EXTERNAL_EEPROM_ADDR<<1)|I2C_WRITE);
-  rtc.write((int)(address >> 8));   // MSB
-  rtc.write((int)(address & 0xFF)); // LSB
-  rtc.restart((EXTERNAL_EEPROM_ADDR<<1)|I2C_READ);
-  byte b = rtc.read(true);
-  rtc.stop();
-  return b;
+  Wire.beginTransmission(EXTERNAL_EEPROM_ADDR);
+  Wire.write((unsigned char)(address >> 8));   // MSB
+  Wire.write((unsigned char)(address & 0xFF)); // LSB
+  Wire.endTransmission();
+  Wire.requestFrom(EXTERNAL_EEPROM_ADDR, 1);
+  while (!Wire.available())
+	;
+  byte data = Wire.read();
+  Wire.endTransmission();
+  return data;
 }
 
 // get the EEPROM address of a file, or the end if fileName is null

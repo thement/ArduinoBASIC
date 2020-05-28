@@ -17,12 +17,6 @@
 // If using an external EEPROM, you'll also have to initialise it by
 // running once with the appropriate lines enabled in setup() - see below
 
-#if EXTERNAL_EEPROM
-#include <I2cMaster.h>
-// Instance of class for hardware master with pullups enabled
-TwiMaster rtc(true);
-#endif
-
 #ifdef ORIG
 // Keyboard
 const int DataPin = 8;
